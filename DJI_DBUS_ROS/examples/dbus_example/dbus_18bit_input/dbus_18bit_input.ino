@@ -40,6 +40,7 @@ static uint16_t DBus_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CH
 static uint16_t ROS_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
 static uint16_t DBus_Final_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
 static int32_t ROS_Upload[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
+static float ROS_Localization_Upload[6]  = {0, 0, 0, 0, 0, 0};
 //the value of channel can only be 1-3 , the sequence is 01,11,10
 //DBus_Output[LEFT_U] is the value of left up and down
 
@@ -63,12 +64,14 @@ void setup(){
 //  Serial.println("DBUS Status");
   Serial2.begin(100000,SERIAL_8E1);
   dBus.begin();
+  Serial3.begin(115200);
   //ros
   nh.initNode();
   nh.advertise(pub_joy);
   nh.subscribe(sub_joy);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
+  joy_msg.axes_length=6;
 }
 
 void loop(){
@@ -87,7 +90,7 @@ void loop(){
     }
     
   }
-  
+  readLocalizationSystem();
   if(displayTime < currTime) {
       displayTime = currTime + 7;
       publish_joy();
@@ -108,36 +111,94 @@ void joy_cb( const sensor_msgs::Joy& joy){
 }
 void publish_joy(){
   joy_msg.header.stamp = nh.now();
-  joy_msg.buttons=ROS_Upload;
+  joy_msg.buttons = ROS_Upload;
+  joy_msg.axes = ROS_Localization_Upload;
   pub_joy.publish(&joy_msg);
   
 }
-void printDBUSStatus()
-{
-  Serial.print("Thr ");
-  Serial.print(dBus.channels[2]);
-  Serial.print(" Ail ");
-  Serial.print(dBus.channels[0]);
-  Serial.print(" Ele ");
-  Serial.print(dBus.channels[1]);
-  Serial.print(" Rud ");
-  Serial.print(dBus.channels[3]);
-  Serial.print(" Channel1 ");
-  Serial.print(dBus.channels[5]);
-  Serial.print(" Channel2  ");
-  Serial.print(dBus.channels[4]);
-  Serial.print(" Stat ");
-  if (dBus.Failsafe() == DBUS_SIGNAL_FAILSAFE) {
-    Serial.print("FailSafe");
-  } else if (dBus.Failsafe() == DBUS_SIGNAL_LOST) {
-    Serial.print("Signal Lost");
-  } else if (dBus.Failsafe() == DBUS_SIGNAL_OK) {
-    Serial.print("OK");
-  }
-  Serial.println(".");
-  
-}
+float pos_x=0;
+float pos_y=0;
+float zangle=0;
+float xangle=0;
+float yangle=0;
+float w_z=0;
+void readLocalizationSystem(void){
+  static union
+  {
+	 unsigned char data[24];
+	 float ActVal[6];
+  }posture;
+  static unsigned char count=0;
+  static unsigned char i=0;
 
+	while(Serial3.available()>0)   
+	{
+		 unsigned char ch = Serial3.read();
+		 switch(count)
+		 {
+			 case 0:
+				 if(ch==0x0d)
+					 count++;
+				 else
+					 count=0;
+				 break;
+				 
+			 case 1:
+				 if(ch==0x0a)
+				 {
+					 i=0;
+					 count++;
+				 }
+				 else if(ch==0x0d);
+				 else
+					 count=0;
+				 break;
+				 
+			 case 2:
+				 posture.data[i]=ch;
+			   	 i++;
+			  	 if(i>=24)
+				 {
+					 i=0;
+					 count++;
+				 }
+				 break;
+				 
+			 case 3:
+				 if(ch==0x0a)
+					 count++;
+				 else
+					 count=0;
+				 break;
+				 
+			 case 4:
+				 if(ch==0x0d)
+				 {
+      				  zangle=posture.ActVal[0];
+      	  		   	  xangle=posture.ActVal[1];
+      		  	   	  yangle=posture.ActVal[2];
+      			    	  pos_x =posture.ActVal[3];
+      			    	  pos_y =posture.ActVal[4];
+      			     	  w_z   =posture.ActVal[5];
+                                  ROS_Localization_Upload[0] = pos_x;
+                                  ROS_Localization_Upload[1] = pos_y;
+                                  ROS_Localization_Upload[2] = w_z;
+                                  ROS_Localization_Upload[3] = xangle;
+                                  ROS_Localization_Upload[4] = yangle;
+                                  ROS_Localization_Upload[5] = zangle;
+				 }
+			         count=0;
+                                //data updated
+                                 return;
+				 break;
+			 
+			 default:
+				 count=0;
+			   break;		 
+		 } 
+	 }
+  return;
+}
 void write18BitsDbusData(){
   //05 04 20 00 01 D8 00 00 00 00 00 00 00 00 00 00 00 00 original 
   //00 04 20 00 01 58 00 00 00 00 00 00 00 00 00 00 00 00 adjusted
