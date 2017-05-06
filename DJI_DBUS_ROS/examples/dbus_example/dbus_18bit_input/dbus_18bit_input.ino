@@ -51,7 +51,7 @@ uint32_t currTime, displayTime = 0;
 uint8_t i;
 
 //ros
-ros::NodeHandle  nh;
+ros::NodeHandle_<ArduinoHardware, 2, 2, 10, 10>  nh;
 void joy_cb( const sensor_msgs::Joy& joy);
 sensor_msgs::Joy joy_msg;
 ros::Subscriber<sensor_msgs::Joy> sub_joy("/joy_cmd", joy_cb);
@@ -61,18 +61,22 @@ char frameid[] = "/joy_msg";
 
 void setup(){
   pinMode(led, OUTPUT);
+  
 //  Serial.println("DBUS Status");
   Serial2.begin(100000,SERIAL_8E1);
   dBus.begin();
   Serial3.begin(115200);
   //ros
+  nh.getHardware()->setBaud(57600);
   nh.initNode();
   nh.advertise(pub_joy);
   nh.subscribe(sub_joy);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
   joy_msg.axes_length=6;
+  //Serial.begin(115200);
 }
+
 
 void loop(){
   
@@ -180,8 +184,8 @@ void readLocalizationSystem(void){
       			    	  pos_x =posture.ActVal[3];
       			    	  pos_y =posture.ActVal[4];
       			     	  w_z   =posture.ActVal[5];
-                                  ROS_Localization_Upload[0] = pos_x;
-                                  ROS_Localization_Upload[1] = pos_y;
+                                  ROS_Localization_Upload[0] = pos_x/1000.0;
+                                  ROS_Localization_Upload[1] = pos_y/1000.0;
                                   ROS_Localization_Upload[2] = w_z;
                                   ROS_Localization_Upload[3] = xangle;
                                   ROS_Localization_Upload[4] = yangle;
