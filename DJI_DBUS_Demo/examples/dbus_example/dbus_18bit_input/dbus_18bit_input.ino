@@ -5,8 +5,6 @@
   reading result = dBus.channels[0-7]
 
 */
-#include <ros.h>
-#include <std_msgs/UInt16MultiArray.h>
 #include "DJI_DBUS.h"
 #include <Servo.h> 
 
@@ -48,15 +46,11 @@ int led = 13;
 uint32_t currTime, displayTime = 0;
 uint8_t i;
 
-//ros
-ros::NodeHandle n;
-ros::std_msgs::Int16MultiArray RC;
-
 
 void setup(){
   pinMode(led, OUTPUT);
   
-//  Serial.println("DBUS Status");
+  Serial.println("DBUS Status");
   Serial2.begin(100000,SERIAL_8E1);
 
   dBus.begin();
