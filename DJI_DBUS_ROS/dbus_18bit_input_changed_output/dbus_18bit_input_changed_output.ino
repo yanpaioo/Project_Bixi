@@ -75,7 +75,7 @@ void setup(){
   nh.subscribe(sub_joy);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
-  joy_msg.axes_length=6;
+  //joy_msg.axes_length=6;
   //Serial.begin(115200);
 }
 
@@ -125,7 +125,7 @@ void publish_joy(void){
   //upload_data_display();
   joy_msg.header.stamp = nh.now();
   joy_msg.buttons = ROS_Upload;
-  joy_msg.axes = ROS_Localization_Upload;
+  //joy_msg.axes = ROS_Localization_Upload;
   pub_joy.publish(&joy_msg);
   
 }
