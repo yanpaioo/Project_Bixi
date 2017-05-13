@@ -35,6 +35,12 @@ class TfBroadcaster(object):
                              rospy.Time.now(),
                              "encoder",
                              "base_link")
+
+            br.sendTransform((0, 0, 0),
+                             tf.transformations.quaternion_from_euler(0, 0, 0),
+                             rospy.Time.now(),
+                             "base_link",
+                             "odom")            
             
             #will be given by rplidar slam gmapping
             br.sendTransform((0, 0, 0),
@@ -42,7 +48,16 @@ class TfBroadcaster(object):
                              rospy.Time.now(),
                              "odom",
                              "map")
-            
+            #publish odometry
+            odom=Odometry()
+            odom.header.frame_id = "odom"
+            odom.pose.pose.position.x=0
+            odom.pose.pose.position.y=0
+            q=Quaternion()
+            q.x, q.y, q.z, q.w=tf.transformations.quaternion_from_euler(0, 0, 0)
+            odom.pose.pose.orientation=q
+            self.odom_pub.publish(odom)
+
             r.sleep()
 
 
