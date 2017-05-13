@@ -36,10 +36,20 @@ const byte channel = 6;
 static uint16_t DBus_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_UP};
 static uint16_t ROS_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
 static uint16_t DBus_Final_Output[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
-static int32_t ROS_Upload[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
-static float ROS_Localization_Upload[6]  = {0, 0, 0, 0, 0, 0};
+
 //the value of channel can only be 1-3 , the sequence is 01,11,10
 //DBus_Output[LEFT_U] is the value of left up and down
+
+static union
+{
+  uint16_t joyData[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
+  byte toByte[12];
+}ROS_Upload;
+static union
+{
+  float localizationData[6]  = {0, 0, 0, 0, 0, 0};
+  byte toByte[24];
+}ROS_Localization_Upload;
 
 
 DJI_DBUS dBus(Serial1);
@@ -48,8 +58,6 @@ uint32_t currTime, displayTime = 0;
 uint8_t i;
 
 //ros
-ros::NodeHandle nh;
-void joy_cb( const sensor_msgs::Joy& joy);
 void publish_data(void);
 void publish_joy(void);
 void publish_localization(void);
@@ -62,7 +70,7 @@ void setup(){
   Serial2.begin(100000,SERIAL_8E1);
   dBus.begin();
   Serial3.begin(115200);
-
+  
 }
 
 int joy_pub_count =0;
@@ -88,7 +96,7 @@ void loop(){
       displayTime = currTime + 7;
       joy_pub_count++;
       write18BitsDbusData();
-      if(joy_pub_count>10){
+      if(joy_pub_count>2){
         joy_pub_count=0;
         publish_data();
       }
@@ -97,29 +105,36 @@ void loop(){
 
   
 }
-
-void joy_cb( const sensor_msgs::Joy& joy){
+/*
+void joy_cb( ){
   //left button up means auto
   //sequence : left  right_UD  right_LR
     ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[0]);
     ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[1]);
     ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[2]);
 
-}
+}*/
 void publish_data(void){
-  
+  Serial.write(0xFA);
+  Serial.write(0xBC);
   publish_joy();
   publish_localization();
-  
+  Serial.write(0xDE);
 }
 void publish_localization(void){
-
+  for(i=0;i<8;i++){
+    Serial.write(ROS_Localization_Upload.toByte[i]);
+  }
+  for(i=20;i<24;i++){
+    Serial.write(ROS_Localization_Upload.toByte[i]);
+  }
 
 }
 void publish_joy(void){
   //upload_data_display();
-  Serial.print()
-  
+  for(i=0;i<12;i++){
+    Serial.write(ROS_Upload.toByte[i]);
+  }
 }
 float pos_x=0;
 float pos_y=0;
@@ -185,12 +200,12 @@ void readLocalizationSystem(void){
       			    	  pos_x =posture.ActVal[3];
       			    	  pos_y =posture.ActVal[4];
       			     	  w_z   =posture.ActVal[5];
-                                  ROS_Localization_Upload[0] = pos_x/1000.0;
-                                  ROS_Localization_Upload[1] = pos_y/1000.0;
-                                  ROS_Localization_Upload[2] = w_z;
-                                  ROS_Localization_Upload[3] = xangle;
-                                  ROS_Localization_Upload[4] = yangle;
-                                  ROS_Localization_Upload[5] = zangle;
+                    ROS_Localization_Upload.localizationData[0] = pos_x/1000.0;
+                    ROS_Localization_Upload.localizationData[1] = pos_y/1000.0;
+                    ROS_Localization_Upload.localizationData[2] = w_z;
+                    ROS_Localization_Upload.localizationData[3] = xangle;
+                    ROS_Localization_Upload.localizationData[4] = yangle;
+                    ROS_Localization_Upload.localizationData[5] = zangle;
 				 }
 			         count=0;
                                 //data updated
@@ -225,7 +240,7 @@ void write18BitsDbusData(){
   }
   
   for(i = 0;i<channel;i++){
-    ROS_Upload[i] = DBus_Final_Output[i];
+    ROS_Upload.joyData[i] = DBus_Final_Output[i];
   }
 
   Serial2.write((uint8_t) ( ((DBus_Final_Output[0]&0x00FF)>>0) ) );//data1 0-7
@@ -250,7 +265,7 @@ void write18BitsDbusData(){
 void upload_data_display()
 {
   for(i =0;i<6;i++){
-    Serial.print(ROS_Upload[i]);
+    Serial.print(ROS_Upload.joyData[i]);
     Serial.print("\t");
   }
   Serial.println(".");
