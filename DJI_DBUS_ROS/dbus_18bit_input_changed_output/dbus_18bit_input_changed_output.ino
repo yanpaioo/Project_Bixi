@@ -8,6 +8,7 @@
 #include <ros.h>
 #include <ros/time.h>
 #include <sensor_msgs/Joy.h>
+#include <geometry_msgs/Twist.h>
 #include "DJI_DBUS.h"
 
 //there are two versions of DJI controller protocol
@@ -55,9 +56,12 @@ ros::NodeHandle nh;
 void joy_cb( const sensor_msgs::Joy& joy);
 void publish_joy(void);
 void readLocalizationSystem(void);
+void publish_localization(void);
 sensor_msgs::Joy joy_msg;
-ros::Subscriber<sensor_msgs::Joy> sub_joy("/joy_cmd", joy_cb);
+geometry_msgs::Twist localization_msg;
+ros::Subscriber<sensor_msgs::Joy> sub_joy("/vel_cmd", joy_cb);
 ros::Publisher pub_joy( "/joy_msg", &joy_msg);
+ros::Publisher pub_localization( "/localization", &localization_msg);
 char frameid[] = "/joy_msg";
 
 
@@ -72,6 +76,7 @@ void setup(){
   nh.getHardware()->setBaud(57600);
   nh.initNode();
   nh.advertise(pub_joy);
+  nh.advertise(pub_localization);
   nh.subscribe(sub_joy);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
@@ -102,9 +107,11 @@ void loop(){
       displayTime = currTime + 7;
       joy_pub_count++;
       write18BitsDbusData();
+     
       if(joy_pub_count>10){
         joy_pub_count=0;
         publish_joy();
+        publish_localization();
         nh.spinOnce();
       }
       //printDBUSStatus();
@@ -127,6 +134,16 @@ void publish_joy(void){
   joy_msg.buttons = ROS_Upload;
   //joy_msg.axes = ROS_Localization_Upload;
   pub_joy.publish(&joy_msg);
+  
+}
+void publish_localization(void){
+  localization_msg.linear.x = ROS_Localization_Upload[0];
+  localization_msg.linear.y = ROS_Localization_Upload[1];
+  localization_msg.linear.z = ROS_Localization_Upload[2];
+  localization_msg.angular.x = ROS_Localization_Upload[3];
+  localization_msg.angular.y = ROS_Localization_Upload[4];
+  localization_msg.angular.z = ROS_Localization_Upload[5];
+  pub_localization.publish(&localization_msg);
   
 }
 float pos_x=0;
@@ -199,7 +216,8 @@ void readLocalizationSystem(void){
                                   ROS_Localization_Upload[3] = xangle;
                                   ROS_Localization_Upload[4] = yangle;
                                   ROS_Localization_Upload[5] = zangle;
-				 }
+				    upload_data_display();
+                                  }
 			         count=0;
                                 //data updated
                                  return;
@@ -235,7 +253,7 @@ void write18BitsDbusData(){
   for(i = 0;i<channel;i++){
     ROS_Upload[i] = DBus_Final_Output[i];
   }
-  upload_data_display();
+  //upload_data_display();
 
   Serial2.write((uint8_t) ( ((DBus_Final_Output[0]&0x00FF)>>0) ) );//data1 0-7
   Serial2.write((uint8_t) ( ((DBus_Final_Output[0]&0x0700)>>8) | ((DBus_Final_Output[1]&0x001F)<<3) ) );//data1 8-10 data2 0-4 
@@ -259,7 +277,7 @@ void write18BitsDbusData(){
 void upload_data_display()
 {
   for(i =0;i<6;i++){
-    Serial.print(ROS_Upload[i]);
+    Serial.print(ROS_Localization_Upload[i]);
     Serial.print("\t");
   }
   Serial.println(".");
