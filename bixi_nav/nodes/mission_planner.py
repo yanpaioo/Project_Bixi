@@ -6,18 +6,16 @@ from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 import math
 
 
-class GoToGoal(object):
+class MissionPlanner(object):
     x0, y0, yaw0= 0, 0, 0
-    goal_des=[0, 0, 0]
-    initialize=True
+    self.goal_des=[0, 0, 0]
 
     def __init__(self, nodename):
         heading_threshold=3*math.pi/180
-
+        
         rospy.init_node('go_to_goal')
 
         rospy.Subscriber("/odometry/filtered", Odometry, self.odom_callback, queue_size = 50)
-        rospy.sleep(1)
         rospy.Subscriber("/target_goal", PoseStamped, self.goal_callback , queue_size=10)
 
         self.cmd_vel_pub=rospy.Publisher("/cmd_vel", Twist, queue_size=10)
@@ -48,7 +46,7 @@ class GoToGoal(object):
 
         ang_error=math.atan2(math.sin(angle-self.yaw0), math.cos(angle-self.yaw0))
 
-        if abs(ang_error)<math.pi:
+        if ang_error<math.pi:
             msg.angular.z=1024+angular_vel
         else:
             msg.angular.z=1024-angular_vel
@@ -80,20 +78,11 @@ class GoToGoal(object):
 
 
     def odom_callback(self, msg):
-
-
-
         self.x0 = msg.pose.pose.position.x
         self.y0 = msg.pose.pose.position.y
         _, _, self.yaw0 = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))
         self.odom_received = True
         
-
-        if self.initialize is True:
-            self.goal_des=[self.x0, self.y0, self.yaw0]
-            self.initialize=False
-
-
 
 if __name__ == '__main__':
     try:
