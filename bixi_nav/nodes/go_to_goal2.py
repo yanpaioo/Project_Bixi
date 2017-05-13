@@ -3,7 +3,7 @@ import roslib
 import rospy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Joy
-from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseStamped
 import math
 
 
@@ -36,7 +36,7 @@ class GoToGoal(object):
 
         self.cmd_vel_pub=rospy.Publisher("/cmd_vel", Joy, queue_size=10)
 
-        r = rospy.Rate(1/del_T*1000)
+        r = rospy.Rate(1/self.del_T*1000)
 
         while not rospy.is_shutdown():
 
@@ -130,6 +130,6 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.loginfo("Go to goal finished.")
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
 
