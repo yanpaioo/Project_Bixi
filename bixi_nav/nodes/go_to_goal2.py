@@ -91,13 +91,13 @@ class GoToGoal(object):
         x_linear_vel = (self.p_lin * x_error) + (self.d_lin * x_derivative)
         if x_linear_vel > self.lin_vel_thres:
             x_linear_vel = self.lin_vel_thres
-        elif x_linear_vel < -self.lin_vel_thres
+        elif x_linear_vel < -self.lin_vel_thres:
             x_linear_vel = -self.lin_vel_thres
 
         y_linear_Vel = (self.p_lin * y_error) + (self.d_lin * y_derivative)
         if y_linear_vel > self.lin_vel_thres:
             y_linear_vel = self.lin_vel_thres
-        elif y_linear_vel < -self.lin_vel_thres
+        elif y_linear_vel < -self.lin_vel_thres:
             y_linear_vel = -self.lin_vel_thres
 
 
