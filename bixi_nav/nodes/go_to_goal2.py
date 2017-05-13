@@ -41,11 +41,11 @@ class GoToGoal(object):
         while not rospy.is_shutdown():
 
             #if direction not similar, rotate
-            if abs(self.yaw0-self.yaw_des)>heading_threshold:
+            if abs(self.yaw0-self.goal_des[2])>heading_threshold:
                 self.rotate(self.goal_des[2])
             else:
                 #else translate to goal    
-                self.translate(self.goal[0], self.goal[1])
+                self.translate(self.goal_des[0], self.goal_des[1])
 
             r.sleep()
 
@@ -72,9 +72,9 @@ class GoToGoal(object):
             angular_vel = self.ang_vel_thres
         elif angular_vel < -self.ang_vel_thres:
             angular_vel = -self.ang_vel_thres
+        theta = self.bias + angular_vel
 
-        # msg.angular.z = bias + angular_vel
-        msg.buttons[3] = bias + angular_vel
+        msg.buttons = [self.bias, self.bias, theta]
         self.cmd_vel_pub.publish(msg)
         self.pre_ang_error = ang_error
 
@@ -93,18 +93,16 @@ class GoToGoal(object):
             x_linear_vel = self.lin_vel_thres
         elif x_linear_vel < -self.lin_vel_thres:
             x_linear_vel = -self.lin_vel_thres
+        x = self.bias + x_linear_vel
 
-        y_linear_Vel = (self.p_lin * y_error) + (self.d_lin * y_derivative)
+        y_linear_vel = (self.p_lin * y_error) + (self.d_lin * y_derivative)
         if y_linear_vel > self.lin_vel_thres:
             y_linear_vel = self.lin_vel_thres
         elif y_linear_vel < -self.lin_vel_thres:
             y_linear_vel = -self.lin_vel_thres
+        y = self.bias + y_linear_vel
 
-
-        # msg.linear.x = self.bias + x_linear_vel
-        # msg.linear.y = self.bias + y_linear_vel
-        msg.buttons[0] = self.bias + x_linear_vel
-        msg.buttons[1] = self.bias + y_linear_vel
+        msg.buttons = [x, y, self.bias]
         self.cmd_vel_pub.publish(msg)
         self.pre_x_error = x_error
         self.pre_y_error = y_error
