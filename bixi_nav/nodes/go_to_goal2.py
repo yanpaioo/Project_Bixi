@@ -35,7 +35,7 @@ class GoToGoal(object):
 
         self.cmd_vel_pub=rospy.Publisher("/cmd_vel", Twist, queue_size=10)
 
-        r = rospy.Rate(10)
+        r = rospy.Rate(1/Del_T*1000)
 
         while not rospy.is_shutdown():
 
