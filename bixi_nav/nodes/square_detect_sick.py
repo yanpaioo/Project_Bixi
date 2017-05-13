@@ -23,7 +23,7 @@ class FindEdges(object):
     x0, y0, yaw0= 0, 0, 0
     currentScan=LaserScan()
     box_length=0.2
-    isUpsideDown=True
+    isUpsideDown=False
 
     def __init__(self, nodename):
         rospy.init_node(nodename, anonymous=False)
@@ -42,7 +42,7 @@ class FindEdges(object):
             rate.sleep()
 
     def scanCallback(self, msg):
-        window_length=2
+        window_length=4
 
         resolution=0.01
         res=resolution*1
@@ -70,15 +70,23 @@ class FindEdges(object):
 
                     laserGrid[px][py]=1
         else:
-            for i in range(len(msg.ranges)-1, 0):
+            for i in range(len(msg.ranges)):
                 
                 if msg.ranges[i]<window_length/2:
                     theta=i*msg.angle_increment-3*math.pi/4
                     d=msg.ranges[i]
-                    px=int(d*math.cos(theta)/resolution)+mid_point
-                    py=int(d*math.sin(theta)/resolution)+mid_point
+                    
+                    #laser coordinate in grid units
+                    x=int(d*math.cos(theta)/res)
+                    y=int(d*math.sin(theta)/res)
+                    
 
-                    laserGrid[px][py]=1   
+                    #pixel coordinate
+                    px=self.mid_point-y
+                    py=self.mid_point-x
+
+                    laserGrid[px][py]=1
+
         higher_reso = laserGrid
         self.boxes_position=self.detectBox(higher_reso, resolution)
         self.printBox(self.boxes_position)
