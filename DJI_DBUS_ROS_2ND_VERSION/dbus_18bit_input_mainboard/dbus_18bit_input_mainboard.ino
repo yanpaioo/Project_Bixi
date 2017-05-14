@@ -183,14 +183,10 @@ void publish_localization(void){
 }
 void publish_joy(void){
   //upload_data_display();
-  for(i=0;i<11;i++){
+  for(i=0;i<12;i++){
     Serial.write(ROS_Upload.toByte[i]);
     
   }
-  Serial.write((byte)test_count);
-  test_count++;
-  if(test_count>200)
-    test_count=0;
 }
 float pos_x=0;
 float pos_y=0;

@@ -122,12 +122,13 @@ void joy_cb( const sensor_msgs::Joy& joy){
     Serial1.write(ROS_Output.toByte[i]);
   }
   Serial1.write(0xDE);
-
-
+  
+    
 }
 void publish_data(void){
   publish_joy();
   publish_localization();
+  printDBUSStatus();
 }
 void publish_localization(void){
   localization_msg.linear.x = ROS_Localization_Upload[0];
