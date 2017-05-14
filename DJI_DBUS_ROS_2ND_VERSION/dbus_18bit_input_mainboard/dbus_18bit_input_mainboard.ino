@@ -62,7 +62,7 @@ void publish_data(void);
 void publish_joy(void);
 void publish_localization(void);
 void readLocalizationSystem(void);
-
+void read_joy_cmd(void);
 void setup(){
   pinMode(led, OUTPUT);
   Serial.begin(115200);
@@ -80,7 +80,7 @@ void loop(){
   dBus.FeedLine();
   digitalWrite(led, LOW);
   currTime = millis();
-
+  read_joy_cmd();
   if (dBus.toChannels == 1){
     dBus.UpdateChannels();
     dBus.toChannels = 0;
@@ -105,15 +105,65 @@ void loop(){
 
   
 }
-/*
-void joy_cb( ){
+
+void read_joy_cmd( ){
   //left button up means auto
   //sequence : left  right_UD  right_LR
-    ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[0]);
-    ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[1]);
-    ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[2]);
+  static int joy_cmd_flag=0;
+  static int joy_cmd_count=0;
+  static union
+  {
+    uint16_t joyData[3]  = {1024, 1024, 1024};
+    byte toByte[12];
+  }joy_cmd;
+  while(Serial.available()>0)   
+  {
+    unsigned char ch = Serial.read();
+    switch(joy_cmd_flag)
+    {
+      case 0:
+        if(ch==0xFA)
+          joy_cmd_flag++;
+        else
+          joy_cmd_flag=0;
+        break;
+      case 1:
+        if(ch==0xBC)
+        {
+          joy_cmd_count=0;
+          joy_cmd_flag++;
+        }
+        else
+          joy_cmd_flag=0;
+        break;
+      case 2:
+        joy_cmd.toByte[i]=ch;
+        joy_cmd_count++;
+        if(joy_cmd_count>=6){
+          joy_cmd_count=0;
+  	  joy_cmd_flag++;
+	}
+	break;
+      case 3:
+	if(ch==0xDE)
+	  joy_cmd_flag++;
+	else
+	  joy_cmd_flag=0;
+	break;
+      case 4:
+      	ROS_Output[LEFT_LR] = joy_cmd.joyData[0];
+        ROS_Output[RIGHT_UD] = joy_cmd.joyData[1];
+        ROS_Output[RIGHT_LR] = joy_cmd.joyData[2];
+	joy_cmd_flag=0;
+        break;
+			 
+      default:
+	joy_cmd_flag=0;
+	break;		 
+      }
+  }
 
-}*/
+}
 int test_count=0;
 void publish_data(void){
   Serial.write(0xFA);

@@ -5,11 +5,11 @@
   reading result = dBus.channels[0-7]
 
 */
-/*
+
 #include <ros.h>
 #include <ros/time.h>
 #include <sensor_msgs/Joy.h>
-*/
+#include <geometry_msgs/Twist.h>
 #include "DJI_DBUS.h"
 
 //there are two versions of DJI controller protocol
@@ -51,65 +51,93 @@ float ROS_Localization_Upload[6]  = {0, 0, 0, 0, 0, 0};
 int led = 13; 
 uint32_t currTime, displayTime = 0;
 uint8_t i;
-/*
+
 //ros
 ros::NodeHandle nh;
 void joy_cb( const sensor_msgs::Joy& joy);
 void publish_joy(void);
-void readLocalizationSystem(void);
+void publish_localization(void);
 sensor_msgs::Joy joy_msg;
-ros::Subscriber<sensor_msgs::Joy> sub_joy("/joy_cmd", joy_cb);
+geometry_msgs::Twist localization_msg;
+ros::Subscriber<sensor_msgs::Joy> sub_joy("/vel_cmd", joy_cb);
 ros::Publisher pub_joy( "/joy_msg", &joy_msg);
+ros::Publisher pub_localization( "/localization", &localization_msg);
 char frameid[] = "/joy_msg";
-*/
+
 
 void read_data(void);
 void publish_data(void);
 
 void setup(){
   pinMode(led, OUTPUT);
-  Serial.begin(115200);
+  //Serial.begin(115200);
   Serial1.begin(115200);
 //  Serial.println("DBUS Status");
 
-  /*
+  
   //ros
   nh.getHardware()->setBaud(57600);
   nh.initNode();
   nh.advertise(pub_joy);
+  nh.advertise(pub_localization);
   nh.subscribe(sub_joy);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
   //joy_msg.axes_length=6;
 
-  */
+  
 }
 
 
 void loop(){
   
-  digitalWrite(led, LOW);
   currTime = millis();
 
   
   read_data();
   if(displayTime < currTime) {
       displayTime = currTime + 20;
-      /*publish_data();
-      nh.spinOnce();*/
+      publish_data();
+      nh.spinOnce();
       //printDBUSStatus();
   }
 
   
 }
-/*
+
 void joy_cb( const sensor_msgs::Joy& joy){
   //left button up means auto
   //sequence : left  right_UD  right_LR
-    ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[0]);
-    ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[1]);
-    ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[2]);
+  static union
+  {
+    uint16_t joyData[channel]  = {1024, 1024, 1024};
+    byte toByte[6];
+  }ROS_Output;
+  ROS_Output.joyData[0] = (uint16_t)(joy.buttons[0]);
+  ROS_Output.joyData[1] = (uint16_t)(joy.buttons[1]);
+  ROS_Output.joyData[2] = (uint16_t)(joy.buttons[2]);
+  Serial1.write(0xFA);
+  Serial1.write(0xBC);
+  for(i=0;i<6;i++){
+    Serial1.write(ROS_Output.toByte[i]);
+  }
+  Serial1.write(0xDE);
 
+
+}
+void publish_data(void){
+  publish_joy();
+  publish_localization();
+}
+void publish_localization(void){
+  localization_msg.linear.x = ROS_Localization_Upload[0];
+  localization_msg.linear.y = ROS_Localization_Upload[1];
+  localization_msg.linear.z = 0;
+  localization_msg.angular.x = 0;
+  localization_msg.angular.y = 0;
+  localization_msg.angular.z = ROS_Localization_Upload[3];
+  pub_localization.publish(&localization_msg);
+  
 }
 void publish_joy(void){
   //upload_data_display();
@@ -118,7 +146,7 @@ void publish_joy(void){
   //joy_msg.axes = ROS_Localization_Upload;
   pub_joy.publish(&joy_msg);
   
-}*/
+}
 
 void read_data(void){
   static int read_data_count =0;
@@ -177,7 +205,7 @@ void read_data(void){
            for(i=0;i<3;i++){
             ROS_Localization_Upload[i] = localization_read.localizationData[i];
            }
-           printDBUSStatus();
+           //printDBUSStatus();
          }else
            read_data_count=0;
          break;
