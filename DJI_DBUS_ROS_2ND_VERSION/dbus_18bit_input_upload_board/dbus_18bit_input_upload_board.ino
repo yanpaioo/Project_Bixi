@@ -44,16 +44,7 @@ float ROS_Localization_Upload[6]  = {0, 0, 0, 0, 0, 0};
 //the value of channel can only be 1-3 , the sequence is 01,11,10
 //DBus_Output[LEFT_U] is the value of left up and down
 
-static union
-{
-  uint16_t joyData[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
-  byte toByte[12];
-}joy_read;
-static union
-{
-  float localizationData[3]  = {0, 0, 0};
-  byte toByte[12];
-}localization_read;
+
 
 
 
@@ -128,11 +119,25 @@ void publish_joy(void){
   pub_joy.publish(&joy_msg);
   
 }*/
-int count=0;
+
 void read_data(void){
   static int read_data_count =0;
+  static int count=0;
+  static unsigned char ch;
+  static union
+  {
+    uint16_t joyData[channel]  = {1024, 1024, 1024, 1024, CHANNEL_MID, CHANNEL_MID};
+    byte toByte[12];
+  }joy_read;
+  static union
+  {
+    float localizationData[3]  = {0, 0, 0};
+    byte toByte[12];
+  }localization_read;
+  
   while(Serial1.available()>0){
-     unsigned char ch = Serial1.read();
+     ch = Serial1.read();
+     //Serial.write(ch);
      switch(read_data_count)
      {
        case 0:
@@ -184,14 +189,7 @@ void read_data(void){
 }
 void printDBUSStatus()
 {
-  for(i=0;i<12;i++){
-   Serial.write(joy_read.toByte[i]);
-  }
-  for(i=0;i<12;i++){
-     Serial.write(localization_read.toByte[i]);
-  }
-   
-  /*
+
   Serial.print("Thr ");
   Serial.print(ROS_Upload[2]);
   Serial.print(" Ail ");
@@ -206,5 +204,5 @@ void printDBUSStatus()
   Serial.print(ROS_Upload[4]);
   Serial.print(" Stat ");
   Serial.println(".");
-  */
+  
 }

@@ -114,6 +114,7 @@ void joy_cb( ){
     ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[2]);
 
 }*/
+int test_count=0;
 void publish_data(void){
   Serial.write(0xFA);
   Serial.write(0xBC);
@@ -132,9 +133,14 @@ void publish_localization(void){
 }
 void publish_joy(void){
   //upload_data_display();
-  for(i=0;i<12;i++){
+  for(i=0;i<11;i++){
     Serial.write(ROS_Upload.toByte[i]);
+    
   }
+  Serial.write((byte)test_count);
+  test_count++;
+  if(test_count>200)
+    test_count=0;
 }
 float pos_x=0;
 float pos_y=0;
