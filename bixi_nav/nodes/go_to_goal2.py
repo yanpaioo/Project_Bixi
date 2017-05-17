@@ -2,10 +2,14 @@
 import roslib
 import rospy
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Joy
-from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseStamped
-import math
 
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseStamped
+from sensor_msgs.msg import Joy
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
+
+
+
+import math
 
 class GoToGoal(object):
     x0, y0, yaw0= 0, 0, 0
@@ -34,7 +38,7 @@ class GoToGoal(object):
         rospy.sleep(1)
         rospy.Subscriber("/target_goal", PoseStamped, self.goal_callback , queue_size=10)
 
-        self.cmd_vel_pub=rospy.Publisher("/cmd_vel", Joy, queue_size=10)
+        self.cmd_vel_pub=rospy.Publisher("/vel_cmd", Twist, queue_size=10)
 
         r = rospy.Rate(1/self.del_T*1000)
 
@@ -128,6 +132,5 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.loginfo("Go to goal finished.")
 
-# if __name__ == '__main__':
 
 
