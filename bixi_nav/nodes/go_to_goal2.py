@@ -2,9 +2,12 @@
 import roslib
 import rospy
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
-import math
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseStamped
+from sensor_msgs.msg import Joy
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
+
+import math
 
 class GoToGoal(object):
     x0, y0, yaw0= 0, 0, 0
@@ -33,18 +36,18 @@ class GoToGoal(object):
         rospy.sleep(1)
         rospy.Subscriber("/target_goal", PoseStamped, self.goal_callback , queue_size=10)
 
-        self.cmd_vel_pub=rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+        self.cmd_vel_pub=rospy.Publisher("/vel_cmd", Twist, queue_size=10)
 
         r = rospy.Rate(10)
 
         while not rospy.is_shutdown():
 
             #if direction not similar, rotate
-            if abs(self.yaw0-self.yaw_des)>heading_threshold:
+            if abs(self.yaw0-self.goal_des[2])>heading_threshold:
                 self.rotate(self.goal_des[2])
             else:
                 #else translate to goal    
-                self.translate(self.goal[0], self.goal[1])
+                self.translate(self.goal_des[0], self.goal_des[1])
 
             r.sleep()
 
