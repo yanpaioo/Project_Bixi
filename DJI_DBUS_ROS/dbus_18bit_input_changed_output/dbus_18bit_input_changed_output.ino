@@ -85,11 +85,13 @@ void setup(){
 }
 
 int joy_pub_count =0;
+boolean LED_flag = false;
 void loop(){
   
-  if (dBus.Failsafe() == DBUS_SIGNAL_OK) digitalWrite(led, HIGH);
+  if (dBus.Failsafe() == DBUS_SIGNAL_OK) LED_flag = true;
+  else LED_flag =false;
   dBus.FeedLine();
-  digitalWrite(led, LOW);
+  //digitalWrite(led, LOW);
   currTime = millis();
 
   if (dBus.toChannels == 1){
@@ -116,16 +118,19 @@ void loop(){
       }
       //printDBUSStatus();
   }
-
-  
+    
+  if(LED_flag)
+    digitalWrite(led, HIGH);
+  else 
+    digitalWrite(led, LOW);
 }
 
 void joy_cb( const sensor_msgs::Joy& joy){
   //left button up means auto
   //sequence : left  right_UD  right_LR
-    ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[0]);
-    ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[1]);
-    ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[2]);
+    ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[1]);
+    ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[2]);
+    ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[0]);
 
 }
 void publish_joy(void){
@@ -254,7 +259,21 @@ void write18BitsDbusData(){
     ROS_Upload[i] = DBus_Final_Output[i];
   }
   //upload_data_display();
+  
 
+  //aadd safety system
+  if(DBus_Output[CHANNEL_L] == 0||DBus_Output[CHANNEL_R]==0){
+    DBus_Final_Output[CHANNEL_L] = CHANNEL_UP;
+    DBus_Final_Output[CHANNEL_R] = CHANNEL_UP;
+    DBus_Final_Output[LEFT_LR] = ROS_Output[LEFT_LR];
+    DBus_Final_Output[RIGHT_UD] = ROS_Output[RIGHT_UD];
+    DBus_Final_Output[RIGHT_LR] = ROS_Output[RIGHT_LR];
+    DBus_Final_Output[LEFT_UD] = 1024;
+    LED_flag = false;
+  }
+  
+
+    
   Serial2.write((uint8_t) ( ((DBus_Final_Output[0]&0x00FF)>>0) ) );//data1 0-7
   Serial2.write((uint8_t) ( ((DBus_Final_Output[0]&0x0700)>>8) | ((DBus_Final_Output[1]&0x001F)<<3) ) );//data1 8-10 data2 0-4 
   Serial2.write((uint8_t) ( ((DBus_Final_Output[1]&0x07E0)>>5) | ((DBus_Final_Output[2]&0x0003)<<6) ) );// data2 5-10 data3 0-1
