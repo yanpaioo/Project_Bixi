@@ -85,7 +85,7 @@ void stepper_motor(int x)
     digitalWrite(DRn, HIGH);
     int pose_motor = 0;
     delayMicroseconds(10);
-    while (pose_motor < 4000)
+    while (pose_motor < 5000)
     {
       digitalWrite(PUn, HIGH);
       delayMicroseconds(y);
