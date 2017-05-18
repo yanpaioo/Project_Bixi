@@ -23,7 +23,7 @@ class FindEdges(object):
     x0, y0, yaw0= 0, 0, 0
     currentScan=LaserScan()
     box_length=0.2
-    isUpsideDown=False
+    isUpsideDown=True
 
     def __init__(self, nodename):
         rospy.init_node(nodename, anonymous=False)
@@ -53,7 +53,7 @@ class FindEdges(object):
         laserGrid=np.zeros((size, size), dtype=np.uint8)
 
         if self.isUpsideDown is True:
-            for i in range(len(msg.ranges)-180):
+            for i in range(len(msg.ranges)):
                 
                 if msg.ranges[i]<window_length/2:
                     theta=3*math.pi/4-i*msg.angle_increment
@@ -101,7 +101,7 @@ class FindEdges(object):
         #self.listener.waitForTransform("/odom", "/laser", now, rospy.Duration(1.0))
         
         #(trans,rot) = self.listener.lookupTransform('/odom', '/laser', now)
-        trans=[0.26, 0.25]
+        trans=[0.284, 0.171]
 
         origin=int(grid.shape[0]/2)
         #extract lines in rolling window
