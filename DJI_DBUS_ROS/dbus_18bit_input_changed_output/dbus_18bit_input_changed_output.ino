@@ -9,6 +9,7 @@
 #include <ros/time.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Bool.h>
 #include "DJI_DBUS.h"
 
 //there are two versions of DJI controller protocol
@@ -54,15 +55,19 @@ uint8_t i;
 //ros
 ros::NodeHandle nh;
 void joy_cb( const sensor_msgs::Joy& joy);
+void heartbeat_cb (const std_msgs::Bool& heartbeat);  // arduino follows vel_cmd only when heartbeat is published within a timie threshold, uses heartbeat_time
 void publish_joy(void);
 void readLocalizationSystem(void);
 void publish_localization(void);
 sensor_msgs::Joy joy_msg;
 geometry_msgs::Twist localization_msg;
-ros::Subscriber<sensor_msgs::Joy> sub_joy("/vel_cmd", joy_cb);
+ros::Subscriber<sensor_msgs::Joy> sub_joy("/vel_cmd", joy_cb); // cmd from computer
+ros::Subscriber<std_msgs::Bool> sub_heartbeat("/heartbeat", heartbeat_cb);
 ros::Publisher pub_joy( "/joy_msg", &joy_msg);
 ros::Publisher pub_localization( "/localization", &localization_msg);
 char frameid[] = "/joy_msg";
+unsigned long heartbeat_time = 0;  // in ms
+unsigned int heartbeat_time_threshold = 500; // in ms
 
 
 void setup(){
@@ -78,6 +83,7 @@ void setup(){
   nh.advertise(pub_joy);
   nh.advertise(pub_localization);
   nh.subscribe(sub_joy);
+  nh.subscribe(sub_heartbeat);
   joy_msg.header.frame_id =  frameid;
   joy_msg.buttons_length=channel;
   //joy_msg.axes_length=6;
@@ -128,11 +134,21 @@ void loop(){
 void joy_cb( const sensor_msgs::Joy& joy){
   //left button up means auto
   //sequence : left  right_UD  right_LR
+  if ((millis() < heartbeat_time + heartbeat_time_threshold) && (millis() > heartbeat_time - heartbeat_time_threshold))
+  {
     ROS_Output[LEFT_LR] = (uint16_t)(joy.buttons[1]);
     ROS_Output[RIGHT_UD] = (uint16_t)(joy.buttons[2]);
     ROS_Output[RIGHT_LR] = (uint16_t)(joy.buttons[0]);
+  }
 
 }
+
+void heartbeat_cb(const std_msgs::Bool& heartbeat)
+{
+  heartbeat_time = millis();
+}
+
+
 void publish_joy(void){
   //upload_data_display();
   joy_msg.header.stamp = nh.now();

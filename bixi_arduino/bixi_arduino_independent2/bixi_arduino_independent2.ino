@@ -39,7 +39,8 @@ ros::Publisher job_status("job_status", &msg);
 
 int linear_wait_time = 5500; // in ms
 float y = map(stepper_speed, 0, 100, 1000, 230);
-int box_count = 0;
+int box_count = 1;
+int starting_box_count = 1;
 const int box_count_limit = 9;
 
 void killMotors(){
@@ -58,6 +59,12 @@ void linear_motor(bool a)
 
 void stepper_motor(int x)
 {
+  digitalWrite(PUp, HIGH);
+  digitalWrite(DRp, HIGH);
+  // digitalWrite(DRn, LOW); // low - up, high - down
+  digitalWrite(MFp, HIGH);
+  // digitalWrite(MFn, LOW);
+  // digitalWrite(PUn, HIGH);
   if (x == 0)
   {
     digitalWrite(DRn, HIGH);
@@ -87,7 +94,7 @@ void stepper_motor(int x)
     digitalWrite(DRn, HIGH);
     int pose_motor = 0;
     delayMicroseconds(10);
-    while (pose_motor < 5000)
+    while (pose_motor < 4500)
     {
       digitalWrite(PUn, HIGH);
       delayMicroseconds(y);
@@ -135,10 +142,16 @@ void setup()
   digitalWrite(PUn, HIGH);
 
   Serial.begin(9600);
-  killMotors();
+  // killMotors();
 
   linear_motor(0); // retract linear motor
   stepper_motor(0); // stepper down
+
+  digitalWrite(PUp, LOW);
+  digitalWrite(DRp, LOW);
+  digitalWrite(MFp, LOW);
+  digitalWrite(PUn, LOW);
+  digitalWrite(DRn, LOW);
 }
 
 
@@ -146,7 +159,7 @@ void loop()
 {
   if (digitalRead(limit_switch1) && digitalRead(limit_switch2))
   {
-    if (box_count == 0)
+    if (box_count == starting_box_count)
     {
       sense.data = true;
       limit_sense.publish(&sense);
