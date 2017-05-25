@@ -3,20 +3,20 @@
 #include <geometry_msgs/Twist.h>
 #include <Servo.h>
 
-
+// SBT dual motor driver
 #define SBT_MOTOR1_FULL_FORWARD 127
 #define SBT_MOTOR1_FULL_REVERSE 1
-
 #define SBT_MOTOR2_FULL_FORWARD 255
 #define SBT_MOTOR2_FULL_REVERSE 128
-
 #define SBT_ALL_STOP  0
 
+// ir pins
 #define IR_FRONT_LEFT   A0
 #define IR_FRONT_RIGHT  A1
 #define IR_SIDE_LEFT    A2
 #define IR_SIDE_RIGHT   A3
 
+// limit switch pins
 #define LS_STEPPER_TOP  2
 #define LS_STEPPER_BOT  3
 #define LS_BOX_LEFT     4
@@ -54,6 +54,7 @@ void servo_motor (bool x);
 void linear_motor (bool x);
 void stepper_motor (int x);
 void linear_rail (bool x);
+void ir_update_ros();
 
 
 
@@ -96,16 +97,13 @@ void setup()
   // motors reset
   servo_motor(0);
   linear_motor(0);
-  stepper_motor(0);
-  digitalWrite(MFn, LOW);
+  // stepper_motor(0);
+  digitalWrite(MFn, LOW); // free stepper motor
 }
 
 void loop()
 {
-  stepper_motor(1);
-  delay(1000);
-  stepper_motor(0);
-  delay(1000);
+  ir_update_ros();
   nh.spinOnce();
 }
 
@@ -166,6 +164,7 @@ void stepper_motor(int x)
         delayMicroseconds(PULSE_HIGH_TIME);
         digitalWrite(PUn, LOW);
         delayMicroseconds(PULSE_LOW_TIME);
+        nh.spinOnce();
       }
       break;
       
@@ -178,6 +177,7 @@ void stepper_motor(int x)
         delayMicroseconds(PULSE_HIGH_TIME);
         digitalWrite(PUn, LOW);
         delayMicroseconds(PULSE_LOW_TIME);
+        nh.spinOnce();
       }
       break;
       
@@ -196,6 +196,7 @@ void linear_rail (bool x)
       {
         Serial1.write(SBT_MOTOR2_FULL_REVERSE);
         delay(100);
+        nh.spinOnce();
       }
       Serial1.write(SBT_ALL_STOP);
       break;
@@ -205,6 +206,7 @@ void linear_rail (bool x)
       {
         Serial1.write(SBT_MOTOR2_FULL_FORWARD);
         delay(100);
+        nh.spinOnce();
       }
       Serial1.write(SBT_ALL_STOP);
       break;
@@ -212,5 +214,28 @@ void linear_rail (bool x)
     default:
     break;
   }
+}
+
+void ir_update_ros()
+{
+  nh.spinOnce();
+  unsigned int no_times = 100;
+  ir_msg.linear.x = 0;
+  ir_msg.linear.y = 0;
+  ir_msg.angular.x = 0;
+  ir_msg.angular.y = 0;
+  for (int i = 1; i <= no_times; i++)
+  {
+    ir_msg.linear.x += analogRead(IR_FRONT_LEFT);
+    ir_msg.linear.y += analogRead(IR_FRONT_RIGHT);
+    ir_msg.angular.x += analogRead(IR_SIDE_LEFT);
+    ir_msg.angular.y += analogRead(IR_SIDE_RIGHT);
+  }
+  ir_msg.linear.x = int(ir_msg.linear.x / no_times);
+  ir_msg.linear.y = int(ir_msg.linear.y / no_times);
+  ir_msg.angular.x = int(ir_msg.angular.x / no_times);
+  ir_msg.angular.y = int(ir_msg.angular.y / no_times);
+  ir_msg_pub.publish(&ir_msg);
+  delay(50);
 }
 
