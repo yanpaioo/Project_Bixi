@@ -25,18 +25,20 @@
 #define LS_RAIL_BOT     7
 
 // stepper pins
-#define PUp             22
-#define PUn             24
-#define DRp             26
-#define DRn             28
-#define MFp             30
-#define MFn             32
-#define PULSE_HIGH_TIME 100 // in ms
-#define PULSE_LOW_TIME  500-PULSE_HIGH_TIME
+#define PUp             24
+#define PUn             26
+#define DRp             28
+#define DRn             30
+#define MFp             32
+#define MFn             34
+#define PULSE_HIGH_TIME 430 // in us
+#define PULSE_LOW_TIME  860-PULSE_HIGH_TIME
 
 #define SERVO           52
 
 #define LINEAR_WAIT_TIME  5000  // ms
+
+bool setup_done = false;
 
 Servo servo;
 
@@ -67,43 +69,100 @@ void setup()
   nh.advertise(ir_msg_pub);
 
   // IO initialization
-  pinMode(IR_FRONT_LEFT,    INPUT);
-  pinMode(IR_FRONT_RIGHT,   INPUT);
-  pinMode(IR_SIDE_LEFT,     INPUT);
-  pinMode(IR_SIDE_RIGHT,    INPUT);
+  if (setup_done == false)
+  {
+    pinMode(IR_FRONT_LEFT,    INPUT);
+    pinMode(IR_FRONT_RIGHT,   INPUT);
+    pinMode(IR_SIDE_LEFT,     INPUT);
+    pinMode(IR_SIDE_RIGHT,    INPUT);
+  
+    pinMode(LS_STEPPER_TOP,   INPUT);
+    pinMode(LS_STEPPER_BOT,   INPUT);
+    pinMode(LS_BOX_LEFT,      INPUT);
+    pinMode(LS_BOX_RIGHT,     INPUT);
+    pinMode(LS_RAIL_TOP,      INPUT);
+    pinMode(LS_RAIL_BOT,      INPUT);
+  
+    pinMode(PUp,              OUTPUT);
+    pinMode(PUn,              OUTPUT);
+    pinMode(DRp,              OUTPUT);
+    pinMode(DRn,              OUTPUT);
+    pinMode(MFp,              OUTPUT);
+    pinMode(MFn,              OUTPUT);
+    digitalWrite(PUp,         HIGH);
+    digitalWrite(DRp,         HIGH);
+    digitalWrite(MFp,         HIGH); // initialize with no actuation for stepper)
+    digitalWrite(MFn,         LOW);
+  
+    servo.attach(SERVO);
+  
+    Serial1.begin(9600);
+  
+    // motors reset
+    servo_motor(0);
+    linear_rail(0);
+    linear_motor(0);
+    stepper_motor(0);
+    digitalWrite(MFn, LOW); // free stepper motor
 
-  pinMode(LS_STEPPER_TOP,   INPUT);
-  pinMode(LS_STEPPER_BOT,   INPUT);
-  pinMode(LS_BOX_LEFT,      INPUT);
-  pinMode(LS_BOX_RIGHT,     INPUT);
-  pinMode(LS_RAIL_TOP,      INPUT);
-  pinMode(LS_RAIL_BOT,      INPUT);
-
-  pinMode(PUp,              OUTPUT);
-  pinMode(PUn,              OUTPUT);
-  pinMode(DRp,              OUTPUT);
-  pinMode(DRn,              OUTPUT);
-  pinMode(MFp,              OUTPUT);
-  pinMode(MFn,              OUTPUT);
-  digitalWrite(PUp,         HIGH);
-  digitalWrite(DRp,         HIGH);
-  digitalWrite(MFp,         HIGH); // initialize with no actuation for stepper)
-  digitalWrite(MFn,         LOW);
-
-  servo.attach(SERVO);
-
-  Serial1.begin(9600);
-
-  // motors reset
-  servo_motor(0);
-  linear_motor(0);
-  // stepper_motor(0);
-  digitalWrite(MFn, LOW); // free stepper motor
+    setup_done = true;
+  }
+  
 }
+
+unsigned int BOX_COUNT = 1;
+unsigned int STARTING_BOX_COUNT = 1;
+unsigned int BOX_COUNT_FINISH = 10;
+
+  
 
 void loop()
 {
   ir_update_ros();
+  linear_rail(1);
+  if (digitalRead(LS_BOX_LEFT) && digitalRead(LS_BOX_RIGHT))
+  {
+    if (BOX_COUNT == STARTING_BOX_COUNT)
+    {
+      sense.data = true;
+      limit_sense.publish(&sense);
+      delay(1000);
+      linear_motor(1);
+      stepper_motor(1);
+      msg.data = true;
+      job_status.publish(&msg);
+      
+      BOX_COUNT++;
+    }
+    else if (BOX_COUNT < BOX_COUNT_FINISH)
+    {
+      sense.data = true;
+      limit_sense.publish(&sense);
+      delay(1000);
+
+      stepper_motor(2);
+      linear_motor(0);
+      stepper_motor(0);
+      linear_motor(1);
+      stepper_motor(1);
+      msg.data = true;
+      job_status.publish(&msg);
+      
+      BOX_COUNT++;
+    }
+    else if (BOX_COUNT == BOX_COUNT_FINISH)
+    {
+      sense.data = true;
+      limit_sense.publish(&sense);
+      delay(1000);
+      stepper_motor(2); // stepper goes down a bit
+      linear_motor(0);  // retract linear actuator
+      msg.data = true;
+      job_status.publish(&msg);
+      BOX_COUNT++;
+    }
+  }
+
   nh.spinOnce();
 }
 
@@ -152,7 +211,7 @@ void stepper_motor(int x)
 {
   nh.spinOnce();
   digitalWrite(MFn, HIGH);
-
+  delayMicroseconds(10);
   switch(x)
   {
     case 0:
@@ -180,6 +239,23 @@ void stepper_motor(int x)
         nh.spinOnce();
       }
       break;
+
+    case 2:
+    {
+      digitalWrite(DRn, HIGH);
+      unsigned int POSE_MOTOR = 0;
+      delayMicroseconds(10);
+      while (POSE_MOTOR < 4500)
+      {
+        digitalWrite(PUn, HIGH);
+        delayMicroseconds(PULSE_HIGH_TIME);
+        digitalWrite(PUn, LOW);
+        delayMicroseconds(PULSE_LOW_TIME);
+        POSE_MOTOR++;
+        nh.spinOnce();
+      }
+      break;
+    }    
       
     default:
     break;
@@ -216,6 +292,8 @@ void linear_rail (bool x)
   }
 }
 
+
+
 void ir_update_ros()
 {
   nh.spinOnce();
@@ -238,4 +316,10 @@ void ir_update_ros()
   ir_msg_pub.publish(&ir_msg);
   delay(50);
 }
+
+
+
+
+
+
 
