@@ -113,13 +113,13 @@ void setup()
 unsigned int BOX_COUNT = 1;
 unsigned int STARTING_BOX_COUNT = 1;
 unsigned int BOX_COUNT_FINISH = 10;
+unsigned int BOX_COUNT_RAIL_LIFT = 2;
 
   
 
 void loop()
 {
   ir_update_ros();
-  linear_rail(1);
   if (digitalRead(LS_BOX_LEFT) && digitalRead(LS_BOX_RIGHT))
   {
     if (BOX_COUNT == STARTING_BOX_COUNT)
@@ -157,9 +157,16 @@ void loop()
       delay(1000);
       stepper_motor(2); // stepper goes down a bit
       linear_motor(0);  // retract linear actuator
+      delay(1000);
+      // servo_motor(1);
       msg.data = true;
       job_status.publish(&msg);
-      BOX_COUNT++;
+      BOX_COUNT++;      
+    }
+
+    if (BOX_COUNT == BOX_COUNT_RAIL_LIFT)
+    {
+      linear_rail(1);
     }
   }
 
@@ -171,11 +178,11 @@ void servo_motor(bool x)
   nh.spinOnce();
   switch(x)
   {
-    case false:
+    case true:
       servo.writeMicroseconds(500);
       break;
       
-    case true:
+    case false:
       servo.writeMicroseconds(2500);
       break;
 
